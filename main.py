@@ -17,18 +17,20 @@ QUESTION = "Explain the concept of recursion in programming with a simple exampl
 
 MODELS = [
     "openai/gpt-4o-mini",
-    "anthropic/claude-haiku-4-5",
-    "google/gemini-2.0-flash-001",
+    "qwen/qwen-2.5-7b-instruct",
+    "deepseek/deepseek-chat",
     "meta-llama/llama-3.1-8b-instruct",
 ]
 
 # Price per 1 million tokens (input, output) in USD — check openrouter.ai/models for live rates
 PRICES = {
-    "openai/gpt-4o-mini":                  (0.15,  0.60),
-    "anthropic/claude-haiku-4-5":          (0.80,  4.00),
-    "google/gemini-2.0-flash-001":         (0.10,  0.40),
-    "meta-llama/llama-3.1-8b-instruct":   (0.055, 0.055),
+    "openai/gpt-4o-mini":              (0.15,  0.60),
+    "qwen/qwen-2.5-7b-instruct":       (0.07,  0.14),
+    "deepseek/deepseek-chat":          (0.14,  0.28),
+    "meta-llama/llama-3.1-8b-instruct": (0.055, 0.055),
 }
+
+MAX_TOKENS = 512  # cap per call — prevents 402 "not enough credits" errors
 
 TIMEOUT = 30  # seconds per call
 
@@ -45,6 +47,7 @@ def ask(client: OpenAI, question: str, model: str) -> dict:
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": question}],
+        max_tokens=MAX_TOKENS,
         timeout=TIMEOUT,
     )
 
@@ -78,7 +81,7 @@ def print_results(results: list[dict]) -> None:
     print("=" * (COL + 2))
 
     for r in results:
-        print(f"\n{'─' * (COL + 2)}")
+        print(f"\n{'-' * (COL + 2)}")
         if "error" in r:
             print(f"  MODEL : {r['model']}")
             print(f"  ERROR : {r['error']}")
