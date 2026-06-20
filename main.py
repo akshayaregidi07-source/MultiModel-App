@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()  # reads OPENROUTER_API_KEY from .env into os.environ
 
-QUESTION = "Explain the concept of recursion in programming with a simple example."
+QUESTION = "Can someday Human can surpass AI? Support your answer in a line."
 
 MODELS = [
     "openai/gpt-4o-mini",
@@ -72,44 +72,50 @@ def ask(client: OpenAI, question: str, model: str) -> dict:
 
 # ── Output formatting ─────────────────────────────────────────────────────────
 
-def print_results(results: list[dict]) -> None:
-    """Print a readable side-by-side comparison of all model results."""
-    COL = 72  # answer preview width
+# Column widths
+W = {"model": 32, "answer": 45, "latency": 10, "tokens": 16, "cost": 12}
 
-    print("\n" + "=" * (COL + 2))
-    print(f"  Question: {QUESTION}")
-    print("=" * (COL + 2))
+def _trunc(text: str, width: int) -> str:
+    """Truncate text to width, adding '...' if cut."""
+    text = text.replace("\n", " ")
+    return text if len(text) <= width else text[: width - 3] + "..."
+
+def _divider() -> str:
+    return "+-" + "-+-".join("-" * w for w in W.values()) + "-+"
+
+def print_results(results: list[dict]) -> None:
+    """Print results as a 5-column comparison table."""
+    print(f"\n  Question: {QUESTION}\n")
+
+    # Header
+    print(_divider())
+    print("| " + " | ".join(
+        h.upper().center(w) for h, w in W.items()
+    ) + " |")
+    print(_divider())
 
     for r in results:
-        print(f"\n{'-' * (COL + 2)}")
         if "error" in r:
-            print(f"  MODEL : {r['model']}")
-            print(f"  ERROR : {r['error']}")
-            continue
+            model_col  = _trunc(r["model"],         W["model"])
+            answer_col = _trunc(f"ERROR: {r['error']}", W["answer"])
+            lat_col    = "—".center(W["latency"])
+            tok_col    = "—".center(W["tokens"])
+            cost_col   = "—".center(W["cost"])
+        else:
+            model_col  = _trunc(r["model"],          W["model"])
+            answer_col = _trunc(r["answer"],          W["answer"])
+            lat_col    = f"{r['latency']:.2f}s".center(W["latency"])
+            tok_col    = f"{r['in_tok']}in/{r['out_tok']}out".center(W["tokens"])
+            cost_col   = f"${r['cost']:.6f}".center(W["cost"])
 
-        # Wrap the answer to COL characters per line with indentation
-        words = r["answer"].split()
-        lines, line = [], []
-        for word in words:
-            if sum(len(w) + 1 for w in line) + len(word) > COL:
-                lines.append(" ".join(line))
-                line = [word]
-            else:
-                line.append(word)
-        if line:
-            lines.append(" ".join(line))
-
-        print(f"  MODEL   : {r['model']}")
-        print(f"  LATENCY : {r['latency']:.2f}s   |   "
-              f"TOKENS: {r['in_tok']} in / {r['out_tok']} out   |   "
-              f"COST: ${r['cost']:.6f}")
-        print(f"  ANSWER  :")
-        for ln in lines[:8]:          # show up to 8 wrapped lines
-            print(f"    {ln}")
-        if len(lines) > 8:
-            print(f"    … ({len(lines) - 8} more lines)")
-
-    print(f"\n{'=' * (COL + 2)}\n")
+        print("| " + " | ".join([
+            model_col.ljust(W["model"]),
+            answer_col.ljust(W["answer"]),
+            lat_col,
+            tok_col,
+            cost_col,
+        ]) + " |")
+        print(_divider())
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
